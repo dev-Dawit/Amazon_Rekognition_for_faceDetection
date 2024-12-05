@@ -31,29 +31,34 @@ st.write("Upload an image to detect faces using Amazon Rekognition.")
 uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    try:
+        # Open the uploaded file as an image
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Convert image to bytes
-    image_bytes = uploaded_file.read()
+        # Reset file pointer and read the file into bytes
+        uploaded_file.seek(0)
+        image_bytes = uploaded_file.read()
 
-    with st.spinner("Analyzing..."):
-        face_details = detect_faces(image_bytes)
+        if len(image_bytes) == 0:
+            st.error("Failed to read the image. Please upload a valid image.")
+        else:
+            with st.spinner("Analyzing..."):
+                face_details = detect_faces(image_bytes)
 
-    if face_details:
-        st.success(f"Detected {len(face_details)} face(s).")
+            if face_details:
+                st.success(f"Detected {len(face_details)} face(s).")
+                boxed_image = draw_boxes(image, face_details)
+                st.image(boxed_image, caption="Image with Detected Faces", use_column_width=True)
+                st.write("Face Details:")
+                for i, face in enumerate(face_details):
+                    st.write(f"Face {i + 1}:")
+                    st.write(f" - Confidence: {face['Confidence']:.2f}%")
+                    st.write(" - Emotions:")
+                    for emotion in face['Emotions']:
+                        st.write(f"   - {emotion['Type']}: {emotion['Confidence']:.2f}%")
+            else:
+                st.warning("No faces detected.")
+    except Exception as e:
+        st.error(f"Error processing the image: {e}")
 
-        # Draw bounding boxes
-        boxed_image = draw_boxes(image, face_details)
-        st.image(boxed_image, caption="Image with Detected Faces", use_column_width=True)
-
-        # Display detailed results
-        st.write("Face Details:")
-        for i, face in enumerate(face_details):
-            st.write(f"Face {i + 1}:")
-            st.write(f" - Confidence: {face['Confidence']:.2f}%")
-            st.write(" - Emotions:")
-            for emotion in face['Emotions']:
-                st.write(f"   - {emotion['Type']}: {emotion['Confidence']:.2f}%")
-    else:
-        st.warning("No faces detected.")
